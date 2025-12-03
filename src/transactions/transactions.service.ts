@@ -8,12 +8,14 @@ import { AgenciesService } from '../agencies/agencies.service';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionStages } from './enums/transactionStages.enum';
 import { ChangeStateTransactionDto } from './dto/change-stage-transaction.dto';
+import { TransactionHistoryService } from 'src/transaction-history/transaction-history.service';
 
 @Injectable()
 export class TransactionsService {
   constructor(
     @InjectModel(Transaction.name) private readonly transactionModel: Model<Transaction>,
     private readonly agenciesService: AgenciesService,
+    private readonly transactionHistoryService: TransactionHistoryService,
   ) {}
 
   async createTransaction(createTransactionDto: CreateTransactionsDto): Promise<Transaction> {
@@ -35,6 +37,13 @@ export class TransactionsService {
       throw new ConflictException('This transaction already exists for this property and agency. Use update instead.');
     }
     const transaction = await this.transactionModel.create(createTransactionDto);
+
+    await this.transactionHistoryService.createStageChange({
+      transactionId: transaction._id,
+      fromStage: TransactionStages.AGREEMENT,
+      toStage: TransactionStages.AGREEMENT,
+      note: 'Transaction created',
+    });
     return transaction;
   }
 
@@ -74,7 +83,6 @@ export class TransactionsService {
   }
 
   async moveToNextLevel(changeStageDto: ChangeStateTransactionDto): Promise<Transaction> {
-    const { transactionId, stage: nextStage } = changeStageDto;
     const transaction = await this.transactionModel.findById(changeStageDto.transactionId);
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
@@ -84,8 +92,18 @@ export class TransactionsService {
     if (difference !== 1) {
       throw new BadRequestException('Given stage is not next stage of current one');
     }
-    if (changeStageDto) transaction.stage = changeStageDto.stage;
-    return transaction.save();
+
+    const previousStage = transaction.stage;
+    transaction.stage = changeStageDto.stage;
+
+    const savedData = await transaction.save();
+    await this.transactionHistoryService.createStageChange({
+      transactionId: savedData._id,
+      fromStage: previousStage,
+      toStage: savedData.stage,
+    });
+
+    return savedData;
   }
 
   private getStageOrder(stage: TransactionStages): number {
