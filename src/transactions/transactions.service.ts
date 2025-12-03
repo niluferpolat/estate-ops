@@ -9,6 +9,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionStages } from './enums/transactionStages.enum';
 import { ChangeStateTransactionDto } from './dto/change-stage-transaction.dto';
 import { TransactionHistoryService } from 'src/transaction-history/transaction-history.service';
+import { COMMISSION_RULES } from './enums/commission-rules';
 
 @Injectable()
 export class TransactionsService {
@@ -109,5 +110,72 @@ export class TransactionsService {
   private getStageOrder(stage: TransactionStages): number {
     const stageOrder = Object.values(TransactionStages);
     return stageOrder.indexOf(stage) + 1;
+  }
+
+  async getFinancialBreakdown(transactionId: string) {
+    const transaction = await this.transactionModel.findById(transactionId);
+    if (!transaction) {
+      return new NotFoundException('Transaction not found');
+    }
+
+    if (transaction.stage !== TransactionStages.COMPLETED) {
+      throw new BadRequestException('Financial breakdown is only for completed transactions');
+    }
+    const totalCommission = transaction.totalCommission;
+    const relevantRoles = [AgentRoles.LISTING_AGENT, AgentRoles.SELLING_AGENT];
+
+    const weightedAgents = transaction.assignedAgents
+      .map(agent => {
+        const roles = Array.isArray((agent as any).role) ? (agent as any).role : ((agent as any).roles ?? []);
+
+        const weight = roles.filter(r => relevantRoles.includes(r)).length;
+
+        return {
+          agentId: agent.agentId ?? (agent as any).id,
+          agentName: agent.agentName ?? (agent as any).name,
+          roles,
+          weight,
+        };
+      })
+      .filter(a => a.weight > 0);
+
+    if (weightedAgents.length === 0) {
+      throw new BadRequestException('At least one listing/selling agent is required');
+    }
+
+    const totalWeight = weightedAgents.reduce((sum, agent) => sum + agent.weight, 0);
+    const agencyId = typeof transaction.agencyId === 'string' ? transaction.agencyId : transaction.agencyId.toHexString();
+
+    const agency = await this.agenciesService.findById(agencyId);
+
+    const agencyCommission = (totalCommission * COMMISSION_RULES.agencyPercentage) / 100;
+    const agentPool = (totalCommission * COMMISSION_RULES.agentPercentage) / 100;
+
+    const agentCommissionPerWeight = agentPool / totalWeight;
+
+    const agentCommissions = weightedAgents.map(agent => {
+      const commissionAmount = agent.weight * agentCommissionPerWeight;
+
+      return {
+        agentId: agent.agentId,
+        agentName: agent.agentName,
+        roles: agent.role,
+        commission: Number(commissionAmount.toFixed(2)),
+      };
+    });
+
+    return {
+      transaction: {
+        id: transaction._id,
+        propertyIdNumber: transaction.propertyIdNumber,
+        clientIdNumber: transaction.clientIdNumber,
+      },
+      totalCommission,
+      agency: {
+        name: agency.name,
+        commission: agencyCommission,
+      },
+      agents: {},
+    };
   }
 }

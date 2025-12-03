@@ -161,7 +161,7 @@ describe('TransactionsService', () => {
 
   describe('updateTransaction', () => {
     it('should throw Bad ReqExceptionError if no roles are provided', async () => {
-      const dto = {
+      const dto: any = {
         agencyId: new Types.ObjectId(),
         propertyIdNumber: 'PROP-1',
         clientIdNumber: '123',

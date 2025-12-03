@@ -36,4 +36,9 @@ export class TransactionsController {
   async moveToNextStage(@Body() changeStageTransactionDto: ChangeStateTransactionDto) {
     return await this.transactionsService.moveToNextLevel(changeStageTransactionDto);
   }
+
+  @Get(':id/financialBreakdown')
+  async getFinancialBreakdown(@Param('id') id: string) {
+    return await this.transactionsService.getFinancialBreakdown(id);
+  }
 }

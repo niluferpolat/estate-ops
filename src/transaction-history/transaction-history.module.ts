@@ -6,6 +6,6 @@ import { TransactionHistory, TransactionHistorySchema } from './schemas/transact
 @Module({
   imports: [MongooseModule.forFeature([{ name: TransactionHistory.name, schema: TransactionHistorySchema }])],
   providers: [TransactionHistoryService],
-  exports: [TransactionHistoryService]
+  exports: [TransactionHistoryService],
 })
 export class TransactionHistoryModule {}
