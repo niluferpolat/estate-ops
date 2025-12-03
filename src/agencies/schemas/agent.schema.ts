@@ -1,7 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { AgentRoles } from '../enums/agentRoles.enum';
-
 export type AgentDocument = HydratedDocument<Agent>;
 
 @Schema()
@@ -13,11 +11,11 @@ export class Agent {
   @Prop({ required: true, default: '' })
   phone: string;
 
-  @Prop({ enum: AgentRoles, required: true, default: AgentRoles.LISTING_AGENT })
-  role: AgentRoles;
-
   @Prop({ required: true, ref: 'Agency', type: Types.ObjectId })
   agencyId: Types.ObjectId;
+
+  @Prop({ required: true, type: Boolean, default: true })
+  active: boolean;
 }
 
 export const AgentSchema = SchemaFactory.createForClass(Agent);
