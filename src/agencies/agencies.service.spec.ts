@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AgenciesService } from './agencies.service';
 import { Agency } from './schemas/agencies.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Agent } from './schemas/agent.schema';
 import { getModelToken } from '@nestjs/mongoose';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('AgenciesService', () => {
   let service: AgenciesService;
@@ -25,15 +25,15 @@ describe('AgenciesService', () => {
           },
         },
         {
-          provide: 'AgentModel',
-          useValue: {},
+          provide: getModelToken(Agent.name),
+          useValue: { find: jest.fn(), findOne: jest.fn(), findById: jest.fn(), create: jest.fn() },
         },
       ],
     }).compile();
 
     service = module.get<AgenciesService>(AgenciesService);
     agencyModel = module.get(getModelToken(Agency.name));
-    agentModel = module.get(getModelToken('Agent'));
+    agentModel = module.get(getModelToken(Agent.name));
 
     jest.clearAllMocks();
   });
@@ -85,6 +85,103 @@ describe('AgenciesService', () => {
       });
       expect(agencyModel.create).toHaveBeenCalledWith(agencyRequest);
       expect(result).toEqual(savedAgency);
+    });
+  });
+
+  describe('findActiveAgentsByAgencyId', () => {
+    it('should return active agents for given agency id', async () => {
+      const agencyId = new Types.ObjectId().toHexString();
+      const agentsResult = [
+        { _id: 'a1', active: true },
+        { _id: 'a2', active: true },
+      ] as any[];
+
+      (agentModel.find as any).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(agentsResult),
+      });
+
+      const result = await service.findActiveAgentsByAgencyId(agencyId);
+
+      expect(agentModel.find).toHaveBeenCalledWith({
+        agencyId: expect.any(Types.ObjectId),
+        active: true,
+      });
+      expect(result).toEqual(agentsResult);
+    });
+  });
+
+  describe('addAgent', () => {
+    it('should throw NotFoundException if agency does not exist', async () => {
+      const agentRequest = {
+        agencyName: 'Unknown Agency',
+        phone: '+905551112233',
+        name: 'Agent 1',
+      } as any;
+
+      jest.spyOn(service, 'findAgencyByName').mockResolvedValue(null as any);
+
+      await expect(service.addAgent(agentRequest)).rejects.toThrow(NotFoundException);
+
+      expect(service.findAgencyByName).toHaveBeenCalledWith('Unknown Agency');
+      expect(agentModel.findOne).not.toHaveBeenCalled();
+      expect(agentModel.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException if agent with same phone already exists in this agency', async () => {
+      const agentRequest = {
+        agencyName: 'Test Agency',
+        phone: '+905551112233',
+        name: 'Agent 1',
+      } as any;
+
+      const agency = { _id: new Types.ObjectId(), name: 'Test Agency' } as any;
+
+      jest.spyOn(service, 'findAgencyByName').mockResolvedValue(agency);
+
+      const existingAgent = { _id: 'agent1', phone: agentRequest.phone } as any;
+      agentModel.findOne.mockResolvedValue(existingAgent);
+
+      await expect(service.addAgent(agentRequest)).rejects.toThrow(ConflictException);
+
+      expect(agentModel.findOne).toHaveBeenCalledWith({
+        agencyId: agency._id,
+        phone: agentRequest.phone,
+      });
+      expect(agentModel.create).not.toHaveBeenCalled();
+    });
+
+    it('should create and return a new agent when agency exists and phone is unique', async () => {
+      const agentRequest = {
+        agencyName: 'Test Agency',
+        phone: '+905551112233',
+        name: 'Agent 1',
+        role: ['SELLING_AGENT'],
+      } as any;
+
+      const agency = { _id: new Types.ObjectId(), name: 'Test Agency' } as any;
+
+      jest.spyOn(service, 'findAgencyByName').mockResolvedValue(agency);
+
+      agentModel.findOne.mockResolvedValue(null); // aynı phone yok
+
+      const createdAgent = {
+        _id: 'agent1',
+        ...agentRequest,
+        agencyId: agency._id,
+      };
+      agentModel.create.mockResolvedValue(createdAgent);
+
+      const result = await service.addAgent(agentRequest);
+
+      expect(agentModel.findOne).toHaveBeenCalledWith({
+        agencyId: agency._id,
+        phone: agentRequest.phone,
+      });
+      expect(agentModel.create).toHaveBeenCalledWith({
+        ...agentRequest,
+        agencyId: agency._id,
+      });
+      expect(result).toEqual(createdAgent);
     });
   });
 });
