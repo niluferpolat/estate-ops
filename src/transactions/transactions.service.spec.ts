@@ -6,6 +6,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { AgenciesService } from '../agencies/agencies.service';
 import { AgentRoles } from './enums/agentRoles.enum';
+import { TransactionStages } from './enums/transactionStages.enum';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -28,6 +29,8 @@ describe('TransactionsService', () => {
             findOne: jest.fn(),
             find: jest.fn(),
             create: jest.fn(),
+            findById: jest.fn(),
+            findByIdAndUpdate: jest.fn(),
           },
         },
       ],
@@ -153,6 +156,125 @@ describe('TransactionsService', () => {
       });
       expect(transactionModel.create).toHaveBeenCalledWith(dto);
       expect(result).toEqual(created);
+    });
+  });
+
+  describe('updateTransaction', () => {
+    it('should throw Bad ReqExceptionError if no roles are provided', async () => {
+      const dto = {
+        agencyId: new Types.ObjectId(),
+        propertyIdNumber: 'PROP-1',
+        clientIdNumber: '123',
+        totalCommission: 1000,
+        assignedAgents: [],
+        transactionId: new Types.ObjectId(),
+      };
+      await expect(service.updateTransaction(dto)).rejects.toThrow(BadRequestException);
+
+      expect(transactionModel.findById).not.toHaveBeenCalled();
+      expect(transactionModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+    it('should throw BadReqExceptionError if there is a missing role', async () => {
+      const dto: any = {
+        agencyId: new Types.ObjectId(),
+        propertyIdNumber: 'PROP-1',
+        clientIdNumber: '123',
+        totalCommission: 1000,
+        assignedAgents: [{ agentId: '123', agentName: 'agent123', role: [AgentRoles.LISTING_AGENT] }],
+        transactionId: new Types.ObjectId(),
+      };
+      await expect(service.updateTransaction(dto)).rejects.toThrow(BadRequestException);
+      expect(transactionModel.findById).not.toHaveBeenCalled();
+      expect(transactionModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+    it('should throw NotFoundException if transaction does not exist', async () => {
+      const dto: any = {
+        agencyId: new Types.ObjectId(),
+        propertyIdNumber: 'PROP-1',
+        clientIdNumber: '123',
+        totalCommission: 1000,
+        assignedAgents: [
+          {
+            id: new Types.ObjectId(),
+            name: 'Agent 1',
+            role: Object.values(AgentRoles),
+          },
+        ],
+        transactionId: new Types.ObjectId(),
+      };
+
+      (transactionModel.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateTransaction(dto)).rejects.toThrow(NotFoundException);
+
+      expect(transactionModel.findById).toHaveBeenCalledWith(dto.transactionId);
+      expect(transactionModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if transaction is already COMPLETED', async () => {
+      const dto: any = {
+        agencyId: new Types.ObjectId(),
+        propertyIdNumber: 'PROP-1',
+        clientIdNumber: '123',
+        totalCommission: 1000,
+        assignedAgents: [
+          {
+            id: new Types.ObjectId(),
+            name: 'Agent 1',
+            role: Object.values(AgentRoles),
+          },
+        ],
+        transactionId: new Types.ObjectId(),
+      };
+
+      const existing = {
+        _id: dto.transactionId,
+        stage: TransactionStages.COMPLETED,
+      } as any;
+
+      (transactionModel.findById as jest.Mock).mockResolvedValue(existing);
+
+      await expect(service.updateTransaction(dto)).rejects.toThrow(BadRequestException);
+
+      expect(transactionModel.findById).toHaveBeenCalledWith(dto.transactionId);
+      expect(transactionModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should update and return transaction when roles are valid and transaction is not completed', async () => {
+      const dto: any = {
+        agencyId: new Types.ObjectId(),
+        propertyIdNumber: 'PROP-1',
+        clientIdNumber: '123',
+        totalCommission: 1000,
+        assignedAgents: [
+          {
+            id: new Types.ObjectId(),
+            name: 'Agent 1',
+            role: Object.values(AgentRoles),
+          },
+        ],
+        transactionId: new Types.ObjectId(),
+      };
+
+      const existing = {
+        _id: dto.transactionId,
+        stage: TransactionStages.AGREEMENT,
+      } as any;
+
+      const updated = {
+        _id: dto.transactionId,
+        ...dto,
+        stage: TransactionStages.AGREEMENT,
+      };
+
+      (transactionModel.findById as jest.Mock).mockResolvedValue(existing);
+      (transactionModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(updated);
+
+      const result = await service.updateTransaction(dto);
+
+      expect(transactionModel.findById).toHaveBeenCalledWith(dto.transactionId);
+      expect(transactionModel.findByIdAndUpdate).toHaveBeenCalledWith(dto.transactionId, dto, { new: true });
+      expect(result).toEqual(updated);
     });
   });
 });

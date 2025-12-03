@@ -7,6 +7,7 @@ import { AgentRoles } from './enums/agentRoles.enum';
 import { AgenciesService } from '../agencies/agencies.service';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionStages } from './enums/transactionStages.enum';
+import { ChangeStateTransactionDto } from './dto/change-stage-transaction.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -70,5 +71,25 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
     return updated;
+  }
+
+  async moveToNextLevel(changeStageDto: ChangeStateTransactionDto): Promise<Transaction> {
+    const { transactionId, stage: nextStage } = changeStageDto;
+    const transaction = await this.transactionModel.findById(changeStageDto.transactionId);
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    const difference = this.getStageOrder(changeStageDto.stage) - this.getStageOrder(transaction.stage);
+
+    if (difference !== 1) {
+      throw new BadRequestException('Given stage is not next stage of current one');
+    }
+    if (changeStageDto) transaction.stage = changeStageDto.stage;
+    return transaction.save();
+  }
+
+  private getStageOrder(stage: TransactionStages): number {
+    const stageOrder = Object.values(TransactionStages);
+    return stageOrder.indexOf(stage) + 1;
   }
 }

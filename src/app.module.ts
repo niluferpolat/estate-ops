@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AgenciesModule } from './agencies/agencies.module';
+import { TransactionHistoryModule } from './transaction-history/transaction-history.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -15,6 +16,7 @@ import { AgenciesModule } from './agencies/agencies.module';
     }),
     TransactionsModule,
     AgenciesModule,
+    TransactionHistoryModule,
   ],
 })
 export class AppModule {}
