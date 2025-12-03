@@ -63,3 +63,8 @@ Test coverage:
 ```bash
 npm run test:cov
 ```
+
+### 🔗 Live API (Railway Deploy)
+
+👉 **[Estate OPS](https://estate-ops-production.up.railway.app/api)**
+
