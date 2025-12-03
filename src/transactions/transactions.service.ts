@@ -8,7 +8,7 @@ import { AgenciesService } from '../agencies/agencies.service';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionStages } from './enums/transactionStages.enum';
 import { ChangeStateTransactionDto } from './dto/change-stage-transaction.dto';
-import { TransactionHistoryService } from 'src/transaction-history/transaction-history.service';
+import { TransactionHistoryService } from '../transaction-history/transaction-history.service';
 import { COMMISSION_RULES } from './enums/commission-rules';
 
 @Injectable()
@@ -114,6 +114,7 @@ export class TransactionsService {
 
   async getFinancialBreakdown(transactionId: string) {
     const transaction = await this.transactionModel.findById(transactionId);
+
     if (!transaction) {
       return new NotFoundException('Transaction not found');
     }
@@ -126,19 +127,11 @@ export class TransactionsService {
 
     const weightedAgents = transaction.assignedAgents
       .map(agent => {
-        const roles = Array.isArray((agent as any).role) ? (agent as any).role : ((agent as any).roles ?? []);
-
+        const roles = Array.isArray(agent.role) ? agent.role : [agent.role];
         const weight = roles.filter(r => relevantRoles.includes(r)).length;
-
-        return {
-          agentId: agent.agentId ?? (agent as any).id,
-          agentName: agent.agentName ?? (agent as any).name,
-          roles,
-          weight,
-        };
+        return { ...agent, agentId: agent.agentId, agentName: agent.agentName, role: roles, weight };
       })
       .filter(a => a.weight > 0);
-
     if (weightedAgents.length === 0) {
       throw new BadRequestException('At least one listing/selling agent is required');
     }
@@ -159,7 +152,7 @@ export class TransactionsService {
       return {
         agentId: agent.agentId,
         agentName: agent.agentName,
-        roles: agent.role,
+        role: agent.role,
         commission: Number(commissionAmount.toFixed(2)),
       };
     });
@@ -175,7 +168,7 @@ export class TransactionsService {
         name: agency.name,
         commission: agencyCommission,
       },
-      agents: {},
+      agents: agentCommissions,
     };
   }
 }

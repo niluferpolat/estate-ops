@@ -10,10 +10,10 @@ export class TransactionHistory {
   @Prop({ type: Types.ObjectId, ref: Transaction.name, required: true })
   transactionId: Types.ObjectId;
 
-  @Prop({ enum: TransactionStages, required: true })
+  @Prop({ type: String, enum: TransactionStages, required: true })
   fromStage: TransactionStages;
 
-  @Prop({ enum: TransactionStages, required: true })
+  @Prop({ type: String, enum: TransactionStages, required: true })
   toStage: TransactionStages;
 }
 

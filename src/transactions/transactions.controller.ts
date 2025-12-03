@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionsDto } from './dto/create-transactions.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { TransactionHistoryService } from 'src/transaction-history/transaction-history.service';
+import { TransactionHistoryService } from '../transaction-history/transaction-history.service';
 import { ChangeStateTransactionDto } from './dto/change-stage-transaction.dto';
 
 @Controller('transactions')

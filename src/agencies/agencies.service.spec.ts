@@ -22,6 +22,7 @@ describe('AgenciesService', () => {
             findOne: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
+            findById: jest.fn(),
           },
         },
         {
@@ -182,6 +183,29 @@ describe('AgenciesService', () => {
         agencyId: agency._id,
       });
       expect(result).toEqual(createdAgent);
+    });
+  });
+
+  describe('findById', () => {
+    it('should throw NotFoundException if agency not found', async () => {
+      const agencyId = new Types.ObjectId().toHexString();
+
+      agencyModel.findById.mockResolvedValue(null as any);
+
+      await expect(service.findById(agencyId)).rejects.toThrow(NotFoundException);
+      expect(agencyModel.findById).toHaveBeenCalledWith(agencyId);
+    });
+
+    it('should return agency if found', async () => {
+      const agencyId = new Types.ObjectId().toHexString();
+      const agencyResult = { _id: agencyId, name: 'Found Agency' } as Agency;
+
+      agencyModel.findById.mockResolvedValue(agencyResult as any);
+
+      const result = await service.findById(agencyId);
+
+      expect(result).toEqual(agencyResult);
+      expect(agencyModel.findById).toHaveBeenCalledWith(agencyId);
     });
   });
 });

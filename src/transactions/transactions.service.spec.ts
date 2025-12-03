@@ -7,12 +7,13 @@ import { NotFoundException, BadRequestException, ConflictException } from '@nest
 import { AgenciesService } from '../agencies/agencies.service';
 import { AgentRoles } from './enums/agentRoles.enum';
 import { TransactionStages } from './enums/transactionStages.enum';
+import { TransactionHistoryService } from '../transaction-history/transaction-history.service';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
   let transactionModel: jest.Mocked<Model<Transaction>>;
   let agenciesService: jest.Mocked<AgenciesService>;
-
+  let transactionHistoryService: jest.Mocked<TransactionHistoryService>;
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -33,13 +34,19 @@ describe('TransactionsService', () => {
             findByIdAndUpdate: jest.fn(),
           },
         },
+        {
+          provide: TransactionHistoryService,
+          useValue: {
+            createStageChange: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
     agenciesService = module.get(AgenciesService);
     transactionModel = module.get(getModelToken(Transaction.name));
-
+    transactionHistoryService = module.get(TransactionHistoryService);
     jest.clearAllMocks();
   });
 
@@ -88,7 +95,6 @@ describe('TransactionsService', () => {
         assignedAgents: [],
       };
       await expect(service.createTransaction(dto)).rejects.toThrow(BadRequestException);
-
       expect(transactionModel.findOne).not.toHaveBeenCalled();
       expect(transactionModel.create).not.toHaveBeenCalled();
     });
@@ -275,6 +281,75 @@ describe('TransactionsService', () => {
       expect(transactionModel.findById).toHaveBeenCalledWith(dto.transactionId);
       expect(transactionModel.findByIdAndUpdate).toHaveBeenCalledWith(dto.transactionId, dto, { new: true });
       expect(result).toEqual(updated);
+    });
+  });
+
+  describe('getFinancialBreakdown', () => {
+    it('should throw NotFoundException if transaction does not exist', async () => {
+      jest.spyOn(transactionModel, 'findById').mockResolvedValue(null);
+      const result = await service.getFinancialBreakdown('1');
+      expect(result).toBeInstanceOf(NotFoundException);
+    });
+    it('should return financial breakdown if transaction is not completed', async () => {
+      transactionModel.findById.mockResolvedValue({
+        stage: TransactionStages.AGREEMENT,
+      } as any);
+      await expect(service.getFinancialBreakdown('1')).rejects.toThrow(BadRequestException);
+    });
+    it('should calculate commissions correctly for completed transaction', async () => {
+      const fakeAgentId1 = new Types.ObjectId();
+      const fakeAgentId2 = new Types.ObjectId();
+      const transactionId = new Types.ObjectId();
+      const agencyId = new Types.ObjectId();
+      transactionModel.findById.mockResolvedValue({
+        _id: transactionId,
+        propertyIdNumber: '11231231',
+        clientIdNumber: '23432432',
+        stage: TransactionStages.COMPLETED,
+        totalCommission: 1000,
+        agencyId: agencyId,
+        assignedAgents: [
+          {
+            agentId: fakeAgentId1,
+            agentName: 'Agent 1',
+            role: [AgentRoles.LISTING_AGENT],
+          },
+          {
+            agentId: fakeAgentId2,
+            agentName: 'Agent 2',
+            role: [AgentRoles.SELLING_AGENT],
+          },
+        ],
+      } as any);
+
+      agenciesService.findById.mockResolvedValue({ name: 'MyAgency' } as any);
+      const result = await service.getFinancialBreakdown('1');
+      expect(result).toEqual({
+        transaction: {
+          id: transactionId,
+          propertyIdNumber: '11231231',
+          clientIdNumber: '23432432',
+        },
+        totalCommission: 1000,
+        agency: {
+          name: 'MyAgency',
+          commission: 500,
+        },
+        agents: [
+          {
+            agentId: fakeAgentId1,
+            agentName: 'Agent 1',
+            role: [AgentRoles.LISTING_AGENT],
+            commission: 250,
+          },
+          {
+            agentId: fakeAgentId2,
+            agentName: 'Agent 2',
+            role: [AgentRoles.SELLING_AGENT],
+            commission: 250,
+          },
+        ],
+      });
     });
   });
 });
