@@ -8,6 +8,8 @@ export type TransactionDocument = HydratedDocument<Transaction>;
 
 @Schema()
 export class Transaction {
+  _id: Types.ObjectId;
+
   @Prop({ required: true })
   propertyIdNumber: string;
 

@@ -1,24 +1,18 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
-import { CreateTransactionsDto } from './dto/create-update-transactions.dto';
+import { CreateTransactionsDto } from './dto/create-transactions.dto';
 
 @Controller('transactions')
 export class TransactionsController {
   constructor(private transactionsService: TransactionsService) {}
-  @Get()
-  getAllTransactions() {
-    return { message: 'List of all transactions' };
+
+  @Get(':agencyId')
+  async getAllTransactions(@Param('agencyId') agencyId: string) {
+    return await this.transactionsService.findAllTransaction(agencyId);
   }
-  @Put(':id')
-  transitionUpdate() {
-    return { message: 'Transaction updated' };
-  }
+
   @Post()
-  createTransaction(@Body() createTransactionDto: CreateTransactionsDto) {
-    return this.transactionsService.createTransaction(createTransactionDto);
-  }
-  @Get(':id')
-  findOneTransaction() {
-    return { message: 'Single transaction details' };
+  async createTransaction(@Body() createTransactionDto: CreateTransactionsDto) {
+    return await this.transactionsService.createTransaction(createTransactionDto);
   }
 }

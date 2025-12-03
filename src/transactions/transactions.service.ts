@@ -1,10 +1,12 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { CreateTransactionsDto } from './dto/create-update-transactions.dto';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateTransactionsDto } from './dto/create-transactions.dto';
 import { Transaction } from './schemas/transactions.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { AgentRoles } from './enums/agentRoles.enum';
 import { AgenciesService } from '../agencies/agencies.service';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { TransactionStages } from './enums/transactionStages.enum';
 
 @Injectable()
 export class TransactionsService {
@@ -38,5 +40,35 @@ export class TransactionsService {
   async findAllTransaction(agencyId: string): Promise<Transaction[]> {
     const agency = await this.agenciesService.findById(agencyId);
     return this.transactionModel.find({ agencyId: agency._id }).exec();
+  }
+
+  async updateTransaction(updateTransactionDto: UpdateTransactionDto): Promise<Transaction> {
+    const { assignedAgents, transactionId } = updateTransactionDto;
+    const roles = assignedAgents.flatMap(agent => agent.role);
+    if (roles.length === 0) {
+      throw new BadRequestException(`Role is required`);
+    }
+    Object.values(AgentRoles).map(required => {
+      if (!roles.includes(required)) {
+        throw new BadRequestException(`Missing required role: ${required}`);
+      }
+    });
+
+    const existing = await this.transactionModel.findById(transactionId);
+
+    if (!existing) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (existing.stage === TransactionStages.COMPLETED) {
+      throw new BadRequestException('Completed transactions cannot be updated');
+    }
+
+    const updated = await this.transactionModel.findByIdAndUpdate(transactionId, updateTransactionDto, { new: true });
+
+    if (!updated) {
+      throw new NotFoundException('Transaction not found');
+    }
+    return updated;
   }
 }
