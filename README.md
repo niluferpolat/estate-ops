@@ -66,5 +66,5 @@ npm run test:cov
 
 ### 🔗 Live API (Railway Deploy)
 
-👉 **[https://your-project-name.up.railway.app](https://estate-ops-production.up.railway.app/api)**
+👉 **[Estate OPS](https://estate-ops-production.up.railway.app/api)**
 
