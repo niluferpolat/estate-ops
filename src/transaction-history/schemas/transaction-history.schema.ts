@@ -15,6 +15,9 @@ export class TransactionHistory {
 
   @Prop({ type: String, enum: TransactionStages, required: true })
   toStage: TransactionStages;
+
+  @Prop({ type: String })
+  note: string;
 }
 
 export const TransactionHistorySchema = SchemaFactory.createForClass(TransactionHistory);
