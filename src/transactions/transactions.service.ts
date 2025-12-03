@@ -1,10 +1,10 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { CreateTransactionsDto } from './dto/create-transactions.dto';
+import { CreateTransactionsDto } from './dto/create-update-transactions.dto';
 import { Transaction } from './schemas/transactions.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { AgentRoles } from './enums/agentRoles.enum';
-import { AgenciesService } from 'src/agencies/agencies.service';
+import { AgenciesService } from '../agencies/agencies.service';
 
 @Injectable()
 export class TransactionsService {

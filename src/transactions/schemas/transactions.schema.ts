@@ -18,6 +18,7 @@ export class Transaction {
   agencyId: Types.ObjectId;
 
   @Prop({
+    type: String,
     enum: TransactionStages,
     default: TransactionStages.AGREEMENT,
     required: true,
