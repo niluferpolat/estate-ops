@@ -32,8 +32,8 @@ export class Transaction {
   @Prop({
     type: [
       {
-        id: { type: Types.ObjectId, ref: 'Agent', required: true },
-        name: { type: String, required: true },
+        agentId: { type: Types.ObjectId, ref: 'Agent', required: true },
+        agentName: { type: String, required: true },
         role: { type: [String], enum: AgentRoles, required: true },
       },
     ],

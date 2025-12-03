@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
+import { CreateTransactionsDto } from './dto/create-transactions.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -13,8 +14,8 @@ export class TransactionsController {
     return { message: 'Transaction updated' };
   }
   @Post()
-  createTransaction() {
-    return this.transactionsService.createTransaction();
+  createTransaction(@Body() createTransactionDto: CreateTransactionsDto) {
+    return this.transactionsService.createTransaction(createTransactionDto);
   }
   @Get(':id')
   findOneTransaction() {

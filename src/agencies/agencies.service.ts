@@ -64,6 +64,14 @@ export class AgenciesService {
       .exec();
   }
 
+  async findById(agencyId: string): Promise<Agency> {
+    const agency = await this.agencyModel.findById(agencyId);
+    if (!agency) {
+      throw new NotFoundException('Agency could not be found');
+    }
+    return agency;
+  }
+
   async deactivateAgent(agentId: string): Promise<Agent> {
     const agent = await this.agentModel.findById(agentId);
     if (!agent) {
