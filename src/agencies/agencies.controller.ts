@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { AgenciesService } from './agencies.service';
 import { CreateAgencyDto } from './dtos/create-agency.dto';
 import { CreateAgentDto } from './dtos/create-agent.dto';
@@ -17,8 +17,23 @@ export class AgenciesController {
     return this.agenciesService.registerAsAgency(agencyRequest);
   }
 
-  @Post(':name/agents')
-  async addAgent(@Body() agentRequest: CreateAgentDto, @Param('name') agencyName: string) {
-    return this.agenciesService.addAgent(agencyName, agentRequest);
+  @Post('agents')
+  async addAgent(@Body() agentRequest: CreateAgentDto) {
+    return this.agenciesService.addAgent(agentRequest);
+  }
+
+  @Get('/my-agents/:id')
+  async findAllActiveAgents(@Param('id') agencyId: string) {
+    return this.agenciesService.findActiveAgentsByAgencyId(agencyId);
+  }
+
+  @Patch('/agents/:id/deactivate')
+  async deactivateAgent(@Param('id') agentId: string) {
+    return this.agenciesService.deactivateAgent(agentId);
+  }
+
+  @Patch('/agents/:id/activate')
+  async activateAgent(@Param('id') agentId: string) {
+    return this.agenciesService.activateAgent(agentId);
   }
 }
