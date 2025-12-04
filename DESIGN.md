@@ -103,28 +103,45 @@ This structure was chosen to keep the system maintainable, scalable, and aligned
 ### 1.4 Rejected Alternatives & Reasons
 - Storing transaction history inside the transaction document
   Because the document would grow indefinetly and become hard to query
+  
 - Storing agents in a seperate collection and referencing them in transactions
   Rejected because embedding agents inside each transaction preserves a snapshot of their role and avoid inconsistent financial calculations.
+  
 - Storing financial break down in the database
   Rejected. Because commission rule may change later and storing results could lead to outdated and inconsistent data.
-- Allowing     
   
+- Allowing Free Stage Jumps Instead of Strict Sequential Workflow
+  Rejected because skipping stages creates invalid or incomplete business states.
+Sequential validation prevents errors and keeps the workflow predictable.
+
+- Showing financial breakdown of transaction in every stage.
+  Because transaction information and commission values can still change before completion, I wanted the behavior to match real-life workflows where financial breakdown is only meaningful once the transaction is finalized.
   
-
-
 ## 2. Most Challenging / Riskiest Part
 
 ### 2.1 Risky Design Decision
-...
+Using embedded agents inside the transaction document instead of referencing an external Agents collection.
+This is risky because if an agent’s information changes, the embedded data inside past transactions will not automatically update.
+Embedding also increases document size, and if not designed carefully, it can cause performance issues.
+I still chose this approach because transactions require a snapshot of agent data for accurate commission calculations and stage history.
 
 ### 2.2 How the Risk Was Mitigated
-...
-
+- Embedding only minimal and stable agent information to avoid document bloat
+- Kept all role-based and commission calculations inside the transaction document, ensuring that updates to agent records do not affect historical financial breakdowns.
 
 ## 3. Real-Life Implementation — What’s Next?
 
 ### 3.1 Recommended Future Enhancements
-...
+- Creating a dedicated Property collection instead of storing only a propertyNumber.
+It should include fields such as square meters, price, and whether it is for sale or rent.
+- Expanding the Agency collection with more detailed attributes. Currently, agencies are searched only by name.
+- Adding authentication and role-based access control to secure the system and restrict operations by privilege level.
+- Implementing APIs for visualizing transaction history and metrics (charts, summaries, timelines), since visualization improves usability and decision-making.
+- Providing API endpoints to expose enums (stages, roles, etc.) so the frontend can dynamically populate selectboxes or checkboxes without hardcoding values.
 
 ### 3.2 Why These Features Matter
-...
+These enhancements improve data accuracy, usability, and security.
+More detailed domain models (properties, agencies) increase the system’s reliability.
+Role-based authentication ensures that sensitive operations are protected.
+Visualization APIs help users understand transaction progress and performance at a glance.
+Finally, exposing enums through the API keeps frontend and backend perfectly in sync, reducing errors and simplifying maintenance.
