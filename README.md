@@ -1,7 +1,7 @@
 # 📦 Estate OPS – Real Estate Operations API
 
 Hello!  
-Here is my masterpiece that I have given my soul for 😎✨
+Estate OPS is a backend API for managing real estate operational workflows, built with NestJS, TypeScript, and MongoDB.
 
 This README includes installation steps, environment variable configuration, running instructions, testing, and deployment info.
 
